@@ -1,9 +1,10 @@
 import json
-import time
 import logging
-import requests
 import os
 import sys
+import time
+
+import requests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]:%(name)s:%(message)s")
@@ -20,14 +21,14 @@ try:
     LAT = os.environ.get("LAT")
     LONG = os.environ.get("LONG")
     SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
-    
+
     # Use a default for SLEEP_INTERVAL if not provided
     try:
         SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", "60"))
     except (ValueError, TypeError):
         logger.warning("Invalid SLEEP_INTERVAL, using default of 60 seconds")
         SLEEP_INTERVAL = 60
-        
+
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
     sys.exit(1)
@@ -118,7 +119,7 @@ def get_ha_sensor_data():
         for entity_id, airmonitor_key in ENTITIES_TO_FORWARD.items():
             try:
                 response = requests.get(
-                    f"{HA_URL}/states/{entity_id}", 
+                    f"{HA_URL}/states/{entity_id}",
                     headers=headers,
                     timeout=10
                 )
@@ -187,37 +188,33 @@ def send_to_airmonitor(data, max_retries=3, retry_delay=10):
         "X-Api-Key": AIRMONITOR_API_KEY,
         "Content-Type": "application/json"
     }
-    
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(
-                AIRMONITOR_API_URL,
-                headers=headers,
-                data=json.dumps(data),
-                timeout=30  # Add timeout
-            )
 
-            if response.status_code in [200, 201]:
-                logger.info(f"Successfully sent data to AirMonitor: {response.json()}")
-                return True
-            elif response.status_code >= 500:
-                # Server error, retry
-                logger.warning(f"Server error ({response.status_code}), retrying in {retry_delay}s (attempt {attempt+1}/{max_retries})")
-                time.sleep(retry_delay)
-            else:
-                # Client error, don't retry
-                logger.error(f"Failed to send data to AirMonitor: {response.status_code} - {response.text}")
-                return False
+    try:
+        response = requests.post(
+            AIRMONITOR_API_URL,
+            headers=headers,
+            data=json.dumps(data),
+            timeout=30  # Add timeout
+        )
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request error: {e}")
-            if attempt < max_retries - 1:
-                logger.warning(f"Retrying in {retry_delay}s (attempt {attempt+1}/{max_retries})")
-                time.sleep(retry_delay)
-    
+        if response.status_code in [200, 201]:
+            logger.info(f"Successfully sent data to AirMonitor: {response.json()}")
+            return True
+        elif response.status_code >= 500:
+            # Server error, retry
+            logger.warning(
+                f"Server error ({response.status_code}), retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
+            time.sleep(retry_delay)
+        else:
+            # Client error, don't retry
+            logger.error(f"Failed to send data to AirMonitor: {response.status_code} - {response.text}")
+            return False
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error: {e}")
+
     logger.error(f"Failed to send data after {max_retries} attempts")
     return False
-
 
 
 def validate_config():
@@ -228,11 +225,11 @@ def validate_config():
     if missing:
         logger.error(f"Missing required configuration: {', '.join(missing)}")
         return False
-        
+
     if not ENTITIES_TO_FORWARD:
         logger.error("No valid entities configured for forwarding")
         return False
-        
+
     return True
 
 
