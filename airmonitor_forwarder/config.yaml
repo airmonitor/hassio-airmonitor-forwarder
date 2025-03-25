@@ -1,0 +1,49 @@
+name: "AirMonitor Data Forwarder"
+description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
+version: "1.0.0"
+slug: "airmonitor_forwarder"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+options:
+  ha_token: ""
+  airmonitor_api_key: ""
+  latitude: 0.0
+  longitude: 0.0
+  sensor_model: "SEN55"
+  sleep_interval: 60
+  entities:
+    pm1: "sensor.airmonitor01_pm_1_m_weight_concentration"
+    pm25: "sensor.airmonitor01_pm_2_5_m_weight_concentration"
+    pm10: "sensor.airmonitor01_pm_10_m_weight_concentration"
+    temperature: "sensor.airmonitor01_temperature"
+    humidity: "sensor.airmonitor01_humidity"
+    ammonia: "sensor.airmonitor01_ammonia"
+    carbon_monoxide: "sensor.airmonitor01_carbon_monoxide"
+    hydrogen: "sensor.airmonitor01_hydrogen"
+    ethanol: "sensor.airmonitor01_ethanol"
+    methane: "sensor.airmonitor01_methane"
+    nitrogen_dioxide: "sensor.airmonitor01_nitrogen_dioxide"
+schema:
+  ha_token: str
+  airmonitor_api_key: str
+  latitude: float
+  longitude: float
+  sensor_model: str
+  sleep_interval: int
+  entities:
+    pm1: str
+    pm25: str
+    pm10: str
+    temperature: str
+    humidity: str
+    ammonia: str
+    carbon_monoxide: str
+    hydrogen: str
+    ethanol: str
+    methane: str
+    nitrogen_dioxide: str

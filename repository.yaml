@@ -1,0 +1,4 @@
+# https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
+name: AirMonitor forwarder Home Assistant add-on repository
+url: 'https://github.com/airmonitor/hassio-airmonitor-forwarder'
+maintainer: Awesome Maintainer <awesome@example.com>
