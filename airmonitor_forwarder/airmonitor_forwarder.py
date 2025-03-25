@@ -174,7 +174,7 @@ def prepare_airmonitor_data(sensor_data):
     return data
 
 
-def send_to_airmonitor(data, max_retries=3, retry_delay=10):
+def send_to_airmonitor(data):
     """
     Send measurements to AirMonitor API with retry logic.
     """
@@ -203,8 +203,7 @@ def send_to_airmonitor(data, max_retries=3, retry_delay=10):
         elif response.status_code >= 500:
             # Server error, retry
             logger.warning(
-                f"Server error ({response.status_code}), retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})")
-            time.sleep(retry_delay)
+                f"Server error ({response.status_code})")
         else:
             # Client error, don't retry
             logger.error(f"Failed to send data to AirMonitor: {response.status_code} - {response.text}")
@@ -213,7 +212,7 @@ def send_to_airmonitor(data, max_retries=3, retry_delay=10):
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error: {e}")
 
-    logger.error(f"Failed to send data after {max_retries} attempts")
+    logger.error(f"Failed to send data to AirMonitor")
     return False
 
 
