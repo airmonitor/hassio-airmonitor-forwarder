@@ -4,6 +4,7 @@ bashio::log.info "Starting AirMonitor Forwarder add-on"
 
 # Get config values
 export HA_TOKEN=$(bashio::config 'ha_token')
+export HA_URL=$(bashio::config 'ha_url')
 export AIRMONITOR_API_KEY=$(bashio::config 'airmonitor_api_key')
 export LAT=$(bashio::config 'latitude')
 export LONG=$(bashio::config 'longitude')
