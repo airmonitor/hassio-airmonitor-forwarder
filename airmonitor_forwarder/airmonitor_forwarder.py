@@ -11,15 +11,14 @@ logger = logging.getLogger("AirMonitor-Forwarder")
 
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
-HA_URL = "http://supervisor/core/api"
 # Get environment variables with validation
 try:
-    HA_TOKEN = os.environ.get("HA_TOKEN")
-    HA_URL = os.environ.get("HA_URL")
-    AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
-    LAT = os.environ.get("LAT")
-    LONG = os.environ.get("LONG")
-    SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
+    HA_TOKEN = os.environ["HA_TOKEN"]
+    HA_URL = os.environ["HA_URL"]
+    AIRMONITOR_API_KEY = os.environ["AIRMONITOR_API_KEY"]
+    LAT = os.environ["LAT"]
+    LONG = os.environ["LONG"]
+    SENSOR_MODEL = os.environ["SENSOR_MODEL"]
         
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
