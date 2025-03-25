@@ -1,6 +1,6 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.0.0"
+version: "1.2.0"
 slug: "airmonitor_forwarder"
 init: false
 arch:
@@ -9,6 +9,8 @@ arch:
   - armhf
   - armv7
   - i386
+startup: application
+boot: auto
 options:
   ha_token: ""
   airmonitor_api_key: ""

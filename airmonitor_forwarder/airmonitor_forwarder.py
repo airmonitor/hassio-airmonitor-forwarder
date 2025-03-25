@@ -3,6 +3,7 @@ import time
 import logging
 import requests
 import os
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]:%(name)s:%(message)s")
@@ -11,40 +12,51 @@ logger = logging.getLogger("AirMonitor-Forwarder")
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
 HA_URL = "http://supervisor/core/api"
-HA_TOKEN = os.environ.get("HA_TOKEN")
-AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
-
-LAT = str(os.environ.get("LAT"))
-LONG = str(os.environ.get("LONG"))
-SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
-SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", 60))
+# Get environment variables with validation
+try:
+    HA_TOKEN = os.environ.get("HA_TOKEN")
+    AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
+    LAT = os.environ.get("LAT")
+    LONG = os.environ.get("LONG")
+    SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
+    
+    # Use a default for SLEEP_INTERVAL if not provided
+    try:
+        SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", "60"))
+    except ValueError:
+        logger.warning("Invalid SLEEP_INTERVAL, using default of 60 seconds")
+        SLEEP_INTERVAL = 60
+        
+except Exception as e:
+    logger.error(f"Error loading environment variables: {e}")
+    sys.exit(1)
 
 # Define which Home Assistant entities to forward
 ENTITIES_TO_FORWARD = {
-    os.environ.get(
-        "PM1_ENTITY", "sensor.airmonitor01_pm_1_m_weight_concentration"
-    ): "pm1",
-    os.environ.get(
-        "PM25_ENTITY", "sensor.airmonitor01_pm_2_5_m_weight_concentration"
-    ): "pm25",
-    os.environ.get(
-        "PM10_ENTITY", "sensor.airmonitor01_pm_10_m_weight_concentration"
-    ): "pm10",
-    os.environ.get(
-        "TEMPERATURE_ENTITY", "sensor.airmonitor01_temperature"
-    ): "temperature",
-    os.environ.get("HUMIDITY_ENTITY", "sensor.airmonitor01_humidity"): "humidity",
-    os.environ.get("AMMONIA_ENTITY", "sensor.airmonitor01_ammonia"): "nh3",
-    os.environ.get(
-        "CARBON_MONOXIDE_ENTITY", "sensor.airmonitor01_carbon_monoxide"
-    ): "co",
-    os.environ.get("HYDROGEN_ENTITY", "sensor.airmonitor01_hydrogen"): "h2",
-    os.environ.get("ETHANOL_ENTITY", "sensor.airmonitor01_ethanol"): "c2h5oh",
-    os.environ.get("METHANE_ENTITY", "sensor.airmonitor01_methane"): "ch4",
-    os.environ.get(
-        "NITROGEN_DIOXIDE_ENTITY", "sensor.airmonitor01_nitrogen_dioxide"
-    ): "no2",
+    os.environ.get("PM1_ENTITY", ""): "pm1",
+    os.environ.get("PM25_ENTITY", ""): "pm25",
+    os.environ.get("PM10_ENTITY", ""): "pm10",
 }
+
+# Add optional entities if they exist
+optional_entities = [
+    ("TEMPERATURE_ENTITY", "temperature"),
+    ("HUMIDITY_ENTITY", "humidity"),
+    ("AMMONIA_ENTITY", "nh3"),
+    ("CARBON_MONOXIDE_ENTITY", "co"),
+    ("HYDROGEN_ENTITY", "h2"),
+    ("ETHANOL_ENTITY", "c2h5oh"),
+    ("METHANE_ENTITY", "ch4"),
+    ("NITROGEN_DIOXIDE_ENTITY", "no2"),
+]
+
+for env_var, api_key in optional_entities:
+    entity_id = os.environ.get(env_var)
+    if entity_id:
+        ENTITIES_TO_FORWARD[entity_id] = api_key
+
+# Remove any empty entity IDs
+ENTITIES_TO_FORWARD = {k: v for k, v in ENTITIES_TO_FORWARD.items() if k}
 
 
 def get_ha_sensor_data():
@@ -60,30 +72,37 @@ def get_ha_sensor_data():
 
     try:
         for entity_id, airmonitor_key in ENTITIES_TO_FORWARD.items():
-            response = requests.get(f"{HA_URL}/states/{entity_id}", headers=headers)
-
-            if response.status_code == 200:
-                data = response.json()
-                state = data.get("state")
-
-                # Skip unavailable or unknown states
-                if state in ["unavailable", "unknown", "none", ""]:
-                    logger.warning(f"Entity {entity_id} has state {state}, skipping")
-                    continue
-
-                try:
-                    # Convert state to float
-                    value = float(state)
-                    sensor_data[airmonitor_key] = value
-                    logger.info(f"Retrieved {entity_id}: {value}")
-                except ValueError:
-                    logger.error(
-                        f"Could not convert state '{state}' to number for {entity_id}"
-                    )
-            else:
-                logger.error(
-                    f"Failed to get {entity_id}: {response.status_code} - {response.text}"
+            try:
+                response = requests.get(
+                    f"{HA_URL}/states/{entity_id}", 
+                    headers=headers,
+                    timeout=10
                 )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    state = data.get("state")
+
+                    # Skip unavailable or unknown states
+                    if state in ["unavailable", "unknown", "none", ""]:
+                        logger.warning(f"Entity {entity_id} has state {state}, skipping")
+                        continue
+
+                    try:
+                        # Convert state to float
+                        value = float(state)
+                        sensor_data[airmonitor_key] = value
+                        logger.info(f"Retrieved {entity_id}: {value}")
+                    except ValueError:
+                        logger.error(
+                            f"Could not convert state '{state}' to number for {entity_id}"
+                        )
+                else:
+                    logger.error(
+                        f"Failed to get {entity_id}: {response.status_code} - {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request error for {entity_id}: {e}")
 
         return sensor_data
 
@@ -165,6 +184,11 @@ def validate_config():
     if missing:
         logger.error(f"Missing required configuration: {', '.join(missing)}")
         return False
+        
+    if not ENTITIES_TO_FORWARD:
+        logger.error("No valid entities configured for forwarding")
+        return False
+        
     return True
 
 

@@ -5,7 +5,8 @@ FROM $BUILD_FROM
 WORKDIR /app
 
 # Install dependencies
-RUN pip install --no-cache-dir requests
+RUN apk add --no-cache python3 py3-pip curl jq
+RUN pip3 install --no-cache-dir requests
 
 # Copy files
 COPY run.sh /

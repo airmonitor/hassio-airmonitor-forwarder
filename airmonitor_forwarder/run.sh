@@ -1,4 +1,6 @@
 #!/usr/bin/env bashio
+# Make sure we have access to the supervisor API
+bashio::log.info "Starting AirMonitor Forwarder add-on"
 
 # Get config values
 export HA_TOKEN=$(bashio::config 'ha_token')
