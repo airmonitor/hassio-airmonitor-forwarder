@@ -1,4 +1,9 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration#add-on-dockerfile
+LABEL \
+  io.hass.version="VERSION" \
+  io.hass.type="addon" \
+  io.hass.arch="armhf|aarch64|i386|amd64"
+
 ARG BUILD_FROM
 FROM $BUILD_FROM
 

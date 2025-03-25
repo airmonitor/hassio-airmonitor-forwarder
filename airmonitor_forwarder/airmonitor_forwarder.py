@@ -19,13 +19,6 @@ try:
     LAT = os.environ.get("LAT")
     LONG = os.environ.get("LONG")
     SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
-    
-    # Use a default for SLEEP_INTERVAL if not provided
-    try:
-        SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", "60"))
-    except ValueError:
-        logger.warning("Invalid SLEEP_INTERVAL, using default of 60 seconds")
-        SLEEP_INTERVAL = 60
         
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
@@ -218,8 +211,7 @@ def main():
                 logger.warning("No sensor data retrieved from Home Assistant")
 
             # Sleep until next forwarding
-            logger.info(f"Sleeping for {SLEEP_INTERVAL} seconds")
-            time.sleep(SLEEP_INTERVAL)
+            time.sleep(60)
 
     except KeyboardInterrupt:
         logger.info("Stopping AirMonitor data forwarder")

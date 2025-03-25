@@ -1,23 +1,25 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.2.0"
+version: "1.2.1"
 slug: "airmonitor_forwarder"
 init: false
+startup: application
+boot: auto
+homeassistant_api: true
+hassio_api: true
 arch:
   - aarch64
   - amd64
   - armhf
   - armv7
   - i386
-startup: application
-boot: auto
+
 options:
   ha_token: ""
   airmonitor_api_key: ""
   latitude: 0.0
   longitude: 0.0
   sensor_model: "SEN55"
-  sleep_interval: 60
   entities:
     pm1: "sensor.airmonitor01_pm_1_m_weight_concentration"
     pm25: "sensor.airmonitor01_pm_2_5_m_weight_concentration"
