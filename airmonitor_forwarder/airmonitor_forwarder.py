@@ -27,9 +27,9 @@ except Exception as e:
 
 # Define which Home Assistant entities to forward
 ENTITIES_TO_FORWARD = {
-    os.environ.get("PM1_ENTITY", ""): "pm1",
-    os.environ.get("PM25_ENTITY", ""): "pm25",
-    os.environ.get("PM10_ENTITY", ""): "pm10",
+    os.environ.get("pm1", "sensor.airmonitor01_pm_1_m_weight_concentration"): "pm1",
+    os.environ.get("pm25", "sensor.airmonitor01_pm_2_5_m_weight_concentration"): "pm25",
+    os.environ.get("pm10", "sensor.airmonitor01_pm_10_m_weight_concentration"): "pm10",
 }
 
 # Add optional entities if they exist
