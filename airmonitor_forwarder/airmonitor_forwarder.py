@@ -259,7 +259,7 @@ def main():
                 logger.warning("No sensor data retrieved from Home Assistant")
 
             # Sleep until next forwarding
-            time.sleep(60)
+            time.sleep(int(SLEEP_INTERVAL))
 
     except KeyboardInterrupt:
         logger.info("Stopping AirMonitor data forwarder")
