@@ -50,7 +50,5 @@ if bashio::config.exists 'entities.nitrogen_dioxide'; then
   export NITROGEN_DIOXIDE_ENTITY=$(bashio::config 'entities.nitrogen_dioxide')
 fi
 
-printenv
-
 # Run the Python script
 python /app/airmonitor_forwarder.py

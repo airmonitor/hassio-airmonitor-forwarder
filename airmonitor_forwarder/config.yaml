@@ -1,12 +1,13 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.2.12"
+version: "1.2.13"
 slug: "airmonitor_forwarder"
 init: false
 startup: application
 boot: auto
 homeassistant_api: true
 hassio_api: true
+auth_api: true
 apparmor: false
 arch:
   - aarch64

@@ -11,8 +11,6 @@ logger = logging.getLogger("AirMonitor-Forwarder")
 
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
-# Configuration from environment variables
-AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
 
 # Get environment variables with validation
 try:
@@ -82,10 +80,37 @@ def get_ha_sensor_data():
     """
     Retrieve sensor data from Home Assistant.
     """
+    if not HA_TOKEN:
+        logger.error("Home Assistant token is not set")
+        return {}
+
     headers = {
         "Authorization": f"Bearer {HA_TOKEN}",
         "Content-Type": "application/json",
     }
+
+    # Test the authentication first
+    try:
+        logger.info("Testing Home Assistant API authentication...")
+        test_response = requests.get(
+            f"{HA_URL}/",
+            headers=headers,
+            timeout=10
+        )
+
+        if test_response.status_code == 401:
+            logger.error("Authentication failed: Invalid token or insufficient permissions")
+            logger.error("Please create a new long-lived access token in Home Assistant")
+            return {}
+        elif test_response.status_code != 200:
+            logger.error(f"API test failed with status code: {test_response.status_code}")
+            logger.error(f"Response: {test_response.text}")
+            return {}
+        else:
+            logger.info("Authentication successful")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error testing API: {e}")
+        return {}
 
     sensor_data = {}
 
