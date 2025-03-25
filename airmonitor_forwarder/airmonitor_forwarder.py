@@ -8,9 +8,6 @@ import sys
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]:%(name)s:%(message)s")
 logger = logging.getLogger("AirMonitor-Forwarder")
-print("\nAll environment variables (one per line):")
-for key, value in os.environ.items():
-    print(f"{key}={value}")
 
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
