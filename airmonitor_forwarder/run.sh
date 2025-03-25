@@ -1,10 +1,17 @@
-#!/usr/bin/env bashio
+#!/usr/bin/with-contenv bashio
+
 # Make sure we have access to the supervisor API
 bashio::log.info "Starting AirMonitor Forwarder add-on"
 
+# Check if we have access to the API
+if ! bashio::api.supervisor.ping; then
+    bashio::log.error "Unable to connect to the Supervisor API"
+    exit 1
+fi
+
 # Get config values
 export HA_TOKEN=$(bashio::config 'ha_token')
-export HA_URL=$(bashio::config 'ha_url')
+export HA_URL="http://supervisor/core/api"
 export AIRMONITOR_API_KEY=$(bashio::config 'airmonitor_api_key')
 export LAT=$(bashio::config 'latitude')
 export LONG=$(bashio::config 'longitude')
@@ -49,7 +56,9 @@ if bashio::config.exists 'entities.nitrogen_dioxide'; then
   export NITROGEN_DIOXIDE_ENTITY=$(bashio::config 'entities.nitrogen_dioxide')
 fi
 
-printenv
+# Debug: Print environment variables
+bashio::log.info "Environment variables:"
+env | sort
 
 # Run the Python script
 python /app/airmonitor_forwarder.py

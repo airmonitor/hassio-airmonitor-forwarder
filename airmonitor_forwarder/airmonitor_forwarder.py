@@ -11,25 +11,43 @@ logger = logging.getLogger("AirMonitor-Forwarder")
 
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
+# Configuration from environment variables
+AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
+
 # Get environment variables with validation
 try:
-    HA_TOKEN = os.environ["HA_TOKEN"]
-    HA_URL = os.environ["HA_URL"]
-    AIRMONITOR_API_KEY = os.environ["AIRMONITOR_API_KEY"]
-    LAT = os.environ["LAT"]
-    LONG = os.environ["LONG"]
-    SENSOR_MODEL = os.environ["SENSOR_MODEL"]
+    HA_TOKEN = os.environ.get("HA_TOKEN")
+    HA_URL = os.environ.get("HA_URL", "http://supervisor/core/api")
+    AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
+    LAT = os.environ.get("LAT")
+    LONG = os.environ.get("LONG")
+    SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
+    
+    # Use a default for SLEEP_INTERVAL if not provided
+    try:
+        SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", "60"))
+    except (ValueError, TypeError):
+        logger.warning("Invalid SLEEP_INTERVAL, using default of 60 seconds")
+        SLEEP_INTERVAL = 60
         
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
     sys.exit(1)
 
 # Define which Home Assistant entities to forward
-ENTITIES_TO_FORWARD = {
-    os.environ.get("pm1", "sensor.airmonitor01_pm_1_m_weight_concentration"): "pm1",
-    os.environ.get("pm25", "sensor.airmonitor01_pm_2_5_m_weight_concentration"): "pm25",
-    os.environ.get("pm10", "sensor.airmonitor01_pm_10_m_weight_concentration"): "pm10",
-}
+ENTITIES_TO_FORWARD = {}
+
+# Add PM entities if they exist
+pm_entities = [
+    ("PM1_ENTITY", "pm1"),
+    ("PM25_ENTITY", "pm25"),
+    ("PM10_ENTITY", "pm10")
+]
+
+for env_var, api_key in pm_entities:
+    entity_id = os.environ.get(env_var)
+    if entity_id and entity_id.lower() != "null":
+        ENTITIES_TO_FORWARD[entity_id] = api_key
 
 # Add optional entities if they exist
 optional_entities = [
@@ -45,8 +63,16 @@ optional_entities = [
 
 for env_var, api_key in optional_entities:
     entity_id = os.environ.get(env_var)
-    if entity_id:
+    if entity_id and entity_id.lower() != "null":
         ENTITIES_TO_FORWARD[entity_id] = api_key
+
+# Log the configuration
+logger.info(f"HA_URL: {HA_URL}")
+logger.info(f"AIRMONITOR_API_URL: {AIRMONITOR_API_URL}")
+logger.info(f"LAT: {LAT}, LONG: {LONG}")
+logger.info(f"SENSOR_MODEL: {SENSOR_MODEL}")
+logger.info(f"SLEEP_INTERVAL: {SLEEP_INTERVAL}")
+logger.info(f"Entities to forward: {ENTITIES_TO_FORWARD}")
 
 # Remove any empty entity IDs
 ENTITIES_TO_FORWARD = {k: v for k, v in ENTITIES_TO_FORWARD.items() if k}
