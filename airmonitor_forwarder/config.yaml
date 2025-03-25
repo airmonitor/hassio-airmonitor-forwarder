@@ -1,6 +1,6 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.2.3"
+version: "1.2.4"
 slug: "airmonitor_forwarder"
 init: false
 startup: application
@@ -15,6 +15,7 @@ arch:
   - i386
 options:
   ha_token: ""
+  ha_url: ""
   airmonitor_api_key: ""
   latitude: 0.0
   longitude: 0.0
@@ -33,11 +34,11 @@ options:
     nitrogen_dioxide: "sensor.airmonitor01_nitrogen_dioxide"
 schema:
   ha_token: str
+  ha_url: str
   airmonitor_api_key: str
   latitude: float
   longitude: float
   sensor_model: str
-  sleep_interval: int
   entities:
     pm1: str
     pm25: str

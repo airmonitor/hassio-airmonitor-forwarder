@@ -15,6 +15,7 @@ HA_URL = "http://supervisor/core/api"
 # Get environment variables with validation
 try:
     HA_TOKEN = os.environ.get("HA_TOKEN")
+    HA_URL = os.environ.get("HA_URL")
     AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
     LAT = os.environ.get("LAT")
     LONG = os.environ.get("LONG")
