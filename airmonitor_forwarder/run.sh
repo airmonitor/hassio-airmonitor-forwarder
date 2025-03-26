@@ -9,8 +9,7 @@ export HA_URL=$(bashio::config 'ha_url')
 export AIRMONITOR_API_KEY=$(bashio::config 'airmonitor_api_key')
 export LAT=$(bashio::config 'latitude')
 export LONG=$(bashio::config 'longitude')
-export SENSOR_MODEL=$(bashio::config 'sensor_model')
-export SLEEP_INTERVAL=$(bashio::config 'sleep_interval')
+export PARTICLE_SENSOR_MODEL=$(bashio::config 'particle_sensor_model')
 
 # Get entity mappings
 export PM1_ENTITY=$(bashio::config 'entities.pm1')

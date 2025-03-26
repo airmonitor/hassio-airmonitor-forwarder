@@ -9,7 +9,17 @@ import requests
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]:%(name)s:%(message)s")
 logger = logging.getLogger("AirMonitor-Forwarder")
-
+# Define supported particle sensor models
+SUPPORTED_PARTICLE_SENSOR_MODELS = [
+    "SDS011",
+    "SDS021",
+    "PMS7003",
+    "PMS5003",
+    "SPS30",
+    "SDSESP",
+    "PTQS1005",
+    "SEN55",
+]
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
 
@@ -20,14 +30,8 @@ try:
     AIRMONITOR_API_KEY = os.environ.get("AIRMONITOR_API_KEY")
     LAT = os.environ.get("LAT")
     LONG = os.environ.get("LONG")
-    SENSOR_MODEL = os.environ.get("SENSOR_MODEL")
-
-    # Use a default for SLEEP_INTERVAL if not provided
-    try:
-        SLEEP_INTERVAL = int(os.environ.get("SLEEP_INTERVAL", "60"))
-    except (ValueError, TypeError):
-        logger.warning("Invalid SLEEP_INTERVAL, using default of 60 seconds")
-        SLEEP_INTERVAL = 60
+    PARTICLE_SENSOR_MODEL = os.environ.get("PARTICLE_SENSOR_MODEL")
+    SLEEP_INTERVAL = 300
 
 except Exception as e:
     logger.error(f"Error loading environment variables: {e}")
@@ -69,7 +73,7 @@ for env_var, api_key in optional_entities:
 logger.info(f"HA_URL: {HA_URL}")
 logger.info(f"AIRMONITOR_API_URL: {AIRMONITOR_API_URL}")
 logger.info(f"LAT: {LAT}, LONG: {LONG}")
-logger.info(f"SENSOR_MODEL: {SENSOR_MODEL}")
+logger.info(f"PARTICLE_SENSOR_MODEL: {PARTICLE_SENSOR_MODEL}")
 logger.info(f"SLEEP_INTERVAL: {SLEEP_INTERVAL}")
 logger.info(f"Entities to forward: {ENTITIES_TO_FORWARD}")
 
@@ -200,7 +204,7 @@ def prepare_airmonitor_data(sensor_data):
     # Add required metadata
     data["lat"] = LAT
     data["long"] = LONG
-    data["sensor"] = SENSOR_MODEL
+    data["sensor"] = PARTICLE_SENSOR_MODEL
 
     return data
 
@@ -289,6 +293,13 @@ def validate_config():
         logger.error("No valid entities configured for forwarding")
         return False
 
+    # Validate particle sensor model
+    if PARTICLE_SENSOR_MODEL not in SUPPORTED_PARTICLE_SENSOR_MODELS:
+        logger.warning(
+            f"Unsupported particle sensor model: {PARTICLE_SENSOR_MODEL}. "
+            f"Using it anyway, but it might not be recognized by AirMonitor.",
+        )
+
     return True
 
 
@@ -336,7 +347,7 @@ def main():
                 logger.warning("No sensor data retrieved from Home Assistant")
 
             # Sleep until next forwarding
-            time.sleep(int(SLEEP_INTERVAL))
+            time.sleep(SLEEP_INTERVAL)
 
     except KeyboardInterrupt:
         logger.info("Stopping AirMonitor data forwarder")
