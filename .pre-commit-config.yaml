@@ -1,0 +1,84 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+  python: python3.12
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-xml
+      - id: check-yaml
+        args: [ --allow-multiple-documents ]
+      - id: destroyed-symlinks
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: pretty-format-json
+        args: [ '--no-sort-keys' ]
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+      - id: detect-aws-credentials
+        args: [ --allow-missing-credentials ]
+  - repo: https://github.com/bwhmather/ssort
+    rev: 0.14.0
+    hooks:
+      - id: ssort
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: 'v0.11.2'
+    hooks:
+      - id: ruff
+        args: [ --fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.15.0"
+    hooks:
+      - id: mypy
+        args: [--explicit-package-bases, --namespace-packages, --ignore-missing-imports, --no-warn-unused-ignores]
+        additional_dependencies:
+          - "types-PyYAML"
+          - "pydantic>=2.5.2"
+          - "types-retry"
+          - "types-requests"
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: "v1.4.0"
+    hooks:
+      - id: python-safety-dependencies-check
+  - repo: https://github.com/Zac-HD/shed
+    rev: "2024.10.1"
+    hooks:
+      - id: shed
+        args: [ --refactor, --py311-plus ]
+        types_or: [ markdown, rst ]
+  - repo: https://github.com/rubik/xenon
+    rev: v0.9.3
+    hooks:
+      - id: xenon
+        args: ["--max-average=C", "--max-modules=C", "--max-absolute=C", "-e 'tests/*,.venv/*,cdk.out/*'"]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.13.1-beta
+    hooks:
+      - id: hadolint
+  -   repo: https://github.com/Yelp/detect-secrets
+      rev: v1.5.0
+      hooks:
+      -   id: detect-secrets
+          exclude: (README.md|airmonitor_forwarder/config.yaml)
+  - repo: https://github.com/owenlamont/uv-secure
+    rev: 0.9.0
+    hooks:
+      - id: uv-secure

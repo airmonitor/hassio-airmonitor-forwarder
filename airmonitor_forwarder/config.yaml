@@ -1,6 +1,6 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.2.19"
+version: "1.3.0"
 slug: "airmonitor_forwarder"
 init: false
 startup: application
@@ -34,6 +34,7 @@ options:
     ethanol: "sensor.airmonitor01_ethanol"
     methane: "sensor.airmonitor01_methane"
     nitrogen_dioxide: "sensor.airmonitor01_nitrogen_dioxide"
+    formaldehyde: "sensor.airmonitor01_formaldehyde"
 schema:
   ha_token: str
   ha_url: str
@@ -53,3 +54,4 @@ schema:
     ethanol: str
     methane: str
     nitrogen_dioxide: str
+    formaldehyde: str

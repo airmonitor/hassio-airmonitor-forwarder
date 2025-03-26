@@ -40,7 +40,7 @@ ENTITIES_TO_FORWARD = {}
 pm_entities = [
     ("PM1_ENTITY", "pm1"),
     ("PM25_ENTITY", "pm25"),
-    ("PM10_ENTITY", "pm10")
+    ("PM10_ENTITY", "pm10"),
 ]
 
 for env_var, api_key in pm_entities:
@@ -96,7 +96,7 @@ def get_ha_sensor_data():
         test_response = requests.get(
             f"{HA_URL}/",
             headers=headers,
-            timeout=10
+            timeout=10,
         )
 
         if test_response.status_code == 401:
@@ -121,7 +121,7 @@ def get_ha_sensor_data():
                 response = requests.get(
                     f"{HA_URL}/states/{entity_id}",
                     headers=headers,
-                    timeout=10
+                    timeout=10,
                 )
 
                 if response.status_code == 200:
@@ -129,7 +129,7 @@ def get_ha_sensor_data():
                     state = data.get("state")
 
                     # Skip unavailable or unknown states
-                    if state in ["unavailable", "unknown", "none", ""]:
+                    if state in {"unavailable", "unknown", "none", ""}:
                         logger.warning(f"Entity {entity_id} has state {state}, skipping")
                         continue
 
@@ -140,11 +140,11 @@ def get_ha_sensor_data():
                         logger.info(f"Retrieved {entity_id}: {value}")
                     except ValueError:
                         logger.error(
-                            f"Could not convert state '{state}' to number for {entity_id}"
+                            f"Could not convert state '{state}' to number for {entity_id}",
                         )
                 else:
                     logger.error(
-                        f"Failed to get {entity_id}: {response.status_code} - {response.text}"
+                        f"Failed to get {entity_id}: {response.status_code} - {response.text}",
                     )
             except requests.exceptions.RequestException as e:
                 logger.error(f"Request error for {entity_id}: {e}")
@@ -186,7 +186,7 @@ def send_to_airmonitor(data):
 
     headers = {
         "X-Api-Key": AIRMONITOR_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     try:
@@ -194,16 +194,15 @@ def send_to_airmonitor(data):
             AIRMONITOR_API_URL,
             headers=headers,
             data=json.dumps(data),
-            timeout=30  # Add timeout
+            timeout=30,  # Add timeout
         )
 
-        if response.status_code in [200, 201]:
+        if response.status_code in {200, 201}:
             logger.info(f"Successfully sent data to AirMonitor: {response.json()}")
             return True
         elif response.status_code >= 500:
             # Server error, retry
-            logger.warning(
-                f"Server error ({response.status_code})")
+            logger.warning(f"Server error ({response.status_code})")
         else:
             # Client error, don't retry
             logger.error(f"Failed to send data to AirMonitor: {response.status_code} - {response.text}")
@@ -212,7 +211,7 @@ def send_to_airmonitor(data):
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error: {e}")
 
-    logger.error(f"Failed to send data to AirMonitor")
+    logger.error("Failed to send data to AirMonitor")
     return False
 
 

@@ -1,0 +1,102 @@
+line-length = 120
+target-version = "py312"
+
+[format]
+preview = true
+
+[lint]
+preview = true
+
+select = [
+    "A", # flake8-builtins - https://beta.ruff.rs/docs/rules/#flake8-builtins-a
+    "ARG", # flake8-unused-arguments - https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
+    "B", # flake8-bugbear-b - https://beta.ruff.rs/docs/rules/#flake8-bugbear-b
+    "C", # flake8-comprehensions
+    "C4", # flake8-comprehensions - https://beta.ruff.rs/docs/rules/#flake8-comprehensions-c4
+    "C90", # mccabe - https://beta.ruff.rs/docs/rules/#mccabe-c90
+    "COM", # flak8-commas - https://beta.ruff.rs/docs/rules/#flake8-commas-com
+    #    "D", # pydocstyle
+    "DTZ", # flake8-datetimez - https://docs.astral.sh/ruff/rules/#flake8-datetimez-dtz
+    "E", # pycodestyle error - https://beta.ruff.rs/docs/rules/#error-e
+    "ERA", # flake8-eradicate - https://beta.ruff.rs/docs/rules/#eradicate-era
+    "EXE", # flake8-executable - https://docs.astral.sh/ruff/rules/#flake8-executable-exe
+    "FA", # flake8-future-annotations - https://beta.ruff.rs/docs/rules/#flake8-future-annotations-fa
+    "FBT", # flake8-boolean-trap - https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt
+    "FIX", # flake8-fixme - https://beta.ruff.rs/docs/rules/#flake8-fixme-fix
+    "FURB", # refurb - https://docs.astral.sh/ruff/rules/#refurb-furb
+    "F", # pyflakes - https://beta.ruff.rs/docs/rules/#pyflakes-f
+    "I", # isort - https://beta.ruff.rs/docs/rules/#isort-i
+    "ICN", # flake8-import-conventions - https://beta.ruff.rs/docs/rules/#flake8-import-conventions-icn
+    "ISC", # flake8-implicit-str-concat - https://beta.ruff.rs/docs/rules/#flake8-implicit-str-concat-isc
+    "LOG", # flake8-logging - https://docs.astral.sh/ruff/rules/#flake8-logging-log
+    "S", # flake8-bandit - https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "SIM", # flake8-simplify - https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
+    "PERF", # Perflint - https://docs.astral.sh/ruff/rules/#perflint-perf
+    "PLE", # pylint error - https://beta.ruff.rs/docs/rules/#error-ple
+    "PLC", # pylint convention - https://beta.ruff.rs/docs/rules/#convention-plc
+    "PLR", # pylint refactoring - https://beta.ruff.rs/docs/rules/#refactor-plr
+    "PLW", # pylint warning - https://beta.ruff.rs/docs/rules/#warning-plw
+    "PL", # pylint - https://beta.ruff.rs/docs/rules/#pylint-pl
+    "PYI", # flake8-pyi - https://beta.ruff.rs/docs/rules/#flake8-pyi-pyi
+    "Q", # flake8-quotes - https://beta.ruff.rs/docs/rules/#flake8-quotes-q
+    "PTH", # flake8-use-pathlib - https://beta.ruff.rs/docs/rules/#flake8-use-pathlib-pth
+    "PT", # flake8-pytest-stile - https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
+    "PYI", # flake8-pyi - https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
+    "RUF", # Ruff-specific rules - https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+    "T10", # flake8-debugger https://beta.ruff.rs/docs/rules/#flake8-debugger-t10
+    "TD", # flake8-todo - https://beta.ruff.rs/docs/rules/#flake8-todos-td
+    "W", # pycodestyle warning - https://beta.ruff.rs/docs/rules/#warning-w
+    "UP", # pyupgrade -  https://docs.astral.sh/ruff/rules/#pyupgrade-up
+]
+ignore = [
+    "PLR2004"
+]
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "cdk.out",
+    ".vscode",
+    ".pytest_cache",
+    ".build",
+    ".mypy_cache",
+    ".github",
+]
+
+[lint.mccabe]
+max-complexity = 15
+
+[lint.isort]
+combine-as-imports = true
+lines-between-types = 1
+known-third-party = ["pydantic", "aws_lambda_powertools", "cdk_opinionated_constructs"]
+
+[lint.per-file-ignores]
+"services/tests/**/*.py" = [
+    # at least this three should be fine in tests:
+    "S101", # asserts allowed in tests...
+    "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    # The below are debateable
+    "PLR2004", # Magic value used in comparison, ...
+    "S311", # Standard pseudo-random generators are not suitable for cryptographic purposes
+]
