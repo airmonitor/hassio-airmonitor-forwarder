@@ -278,7 +278,7 @@ def validate_config():
     Returns:
         bool: True if the configuration is valid, False otherwise
     """
-    required_vars = {["HA_TOKEN", "HA_URL", "AIRMONITOR_API_KEY", "LAT", "LONG"]}
+    required_vars = {"HA_TOKEN", "HA_URL", "AIRMONITOR_API_KEY", "LAT", "LONG"}
     missing = [var for var in required_vars if not os.environ.get(var)]
 
     if missing:
