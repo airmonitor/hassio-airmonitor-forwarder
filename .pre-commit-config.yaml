@@ -77,7 +77,7 @@ repos:
       rev: v1.5.0
       hooks:
       -   id: detect-secrets
-          exclude: (README.md|airmonitor_forwarder/config.yaml)
+          exclude: (README.md|airmonitor_forwarder/config.yaml|airmonitor_forwarder/DOCS.md)
   - repo: https://github.com/owenlamont/uv-secure
     rev: 0.9.0
     hooks:

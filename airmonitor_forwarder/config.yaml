@@ -1,6 +1,6 @@
 name: "AirMonitor Data Forwarder"
 description: "Forwards air quality data from Home Assistant to AirMonitor.pl"
-version: "1.3.4"
+version: "1.3.5"
 slug: "airmonitor_forwarder"
 init: false
 startup: application
@@ -41,7 +41,7 @@ schema:
   airmonitor_api_key: str
   latitude: float
   longitude: float
-  particle_sensor_model: list(SDS011|SDS021|PMS7003|PMS5003|SPS30|SDSESP|PTQS1005|SEN55)
+  particle_sensor_model: list(SDS011|SDS021|PMS7003|PMS5003|SPS30|SDSESP|PTQS1005|HPMA115S0|SEN55)
   entities:
     pm1: str
     pm25: str

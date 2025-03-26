@@ -18,6 +18,7 @@ SUPPORTED_PARTICLE_SENSOR_MODELS = [
     "SPS30",
     "SDSESP",
     "PTQS1005",
+    "HPMA115S0",
     "SEN55",
 ]
 # Configuration from environment variables

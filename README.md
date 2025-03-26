@@ -15,6 +15,22 @@ network.
 - Supports custom entity mapping for different sensor setups
 - Runs as a native Home Assistant add-on
 
+## Supported Sensor Models
+
+The add-on supports the following air quality sensor models:
+
+| Model                                                    | Description                                   |
+|----------------------------------------------------------|-----------------------------------------------|
+| [SEN55](https://botland.com.pl/szukaj?s=SEN55)           | Sensirion SEN55 Environmental Sensor          |
+| [SPS30](https://allegro.pl/listing?string=sps30)         | Sensirion SPS30 Particulate Matter Sensor     |
+| [PMS5003](https://allegro.pl/listing?string=pms5003)     | Plantower PMS5003 Particulate Matter Sensor   |
+| [PMS7003](https://allegro.pl/listing?string=pms7003)     | Plantower PMS7003 Particulate Matter Sensor   |
+| [SDS011](https://allegro.pl/listing?string=sds011)       | Nova Fitness SDS011 Dust Sensor               |
+| [HPMA115S0](https://allegro.pl/listing?string=hpma115s0) | Honeywell HPMA115S0 Particulate Matter Sensor |
+| [SDS021](https://allegro.pl/listing?string=sds021)       | Nova Fitness SDS021 Dust Sensor               |
+
+Select the model that matches your hardware setup. If your specific model isn't listed, choose "CUSTOM".
+
 ## Installation
 
 1. Click the "Add repository to Home Assistant" button above
@@ -33,7 +49,6 @@ airmonitor_api_key: "your_airmonitor_api_key"
 latitude: 52.2297
 longitude: 21.0122
 sensor_model: "PMS7003"
-sleep_interval: 300
 entities:
   pm1: "sensor.particulate_matter_1um"
   pm25: "sensor.particulate_matter_25um"
@@ -50,7 +65,6 @@ entities:
 | `latitude`           | The latitude of your sensor location                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `longitude`          | The longitude of your sensor location                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `sensor_model`       | The model of your sensor (e.g., PMS7003, SDS011)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `sleep_interval`     | Time in seconds between updates (default: 300)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `entities`           | Mapping of AirMonitor parameters to Home Assistant entity IDs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Prerequisites
