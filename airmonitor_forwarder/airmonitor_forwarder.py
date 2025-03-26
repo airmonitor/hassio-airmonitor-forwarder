@@ -79,7 +79,23 @@ ENTITIES_TO_FORWARD = {k: v for k, v in ENTITIES_TO_FORWARD.items() if k}
 
 def get_ha_sensor_data():
     """
-    Retrieve sensor data from Home Assistant.
+    Parameters:
+        None
+
+    Functionality:
+        Retrieves sensor data from Home Assistant API.
+        - Validates that the Home Assistant token is set
+        - Tests authentication with the Home Assistant API
+        - Iterates through configured entities and retrieves their states
+        - Converts entity states to float values
+        - Skips entities with unavailable, unknown, none, or empty states
+        - Handles various error conditions including authentication failures,
+          API errors, and value conversion errors
+
+    Returns:
+        dict: A dictionary mapping AirMonitor keys to sensor values.
+              Returns an empty dictionary if any errors occur or if no
+              valid data is retrieved.
     """
     if not HA_TOKEN:
         logger.error("Home Assistant token is not set")
@@ -158,7 +174,22 @@ def get_ha_sensor_data():
 
 def prepare_airmonitor_data(sensor_data):
     """
-    Prepare data for sending to AirMonitor API.
+    Parameters:
+        sensor_data (dict): Dictionary containing sensor measurements with keys
+                           representing sensor types (e.g., 'pm10', 'temperature')
+                           and values as floating-point measurements.
+
+    Functionality:
+        Prepares sensor data for submission to the AirMonitor API by:
+        - Validating that sensor data exists
+        - Rounding all measurement values to integers as required by the API
+        - Adding required metadata (latitude, longitude, sensor model)
+        - The metadata values are taken from environment variables (LAT, LONG, SENSOR_MODEL)
+
+    Returns:
+        dict: A dictionary containing the formatted data ready for submission to AirMonitor API,
+              including rounded sensor values and required metadata.
+              Returns None if no sensor data is provided.
     """
     if not sensor_data:
         return None
@@ -176,7 +207,24 @@ def prepare_airmonitor_data(sensor_data):
 
 def send_to_airmonitor(data):
     """
-    Send measurements to AirMonitor API with retry logic.
+    Parameters:
+        data (dict): Dictionary containing the formatted sensor data to be sent to AirMonitor API,
+                    including measurements and required metadata (lat, long, sensor).
+
+    Functionality:
+        Sends the provided sensor data to the AirMonitor API.
+        - Validates that data is not empty
+        - Logs the data being sent
+        - Sets up proper headers including API key
+        - Makes a POST request to the AirMonitor API
+        - Handles different response status codes:
+          * 200/201: Success
+          * 500+: Server errors (potentially retryable)
+          * Other: Client errors (non-retryable)
+        - Catches and logs any request exceptions
+
+    Returns:
+        bool: True if data was successfully sent to AirMonitor, False otherwise
     """
     if not data:
         logger.error("No data to send to AirMonitor")
@@ -216,8 +264,21 @@ def send_to_airmonitor(data):
 
 
 def validate_config():
-    """Validate that all required configuration is present."""
-    required_vars = ["HA_TOKEN", "AIRMONITOR_API_KEY", "LAT", "LONG"]
+    """
+    Parameters:
+        None
+
+    Functionality:
+        Validates the application configuration by:
+        - Checking that all required environment variables are set (HA_TOKEN, HA_URL,
+          AIRMONITOR_API_KEY, LAT, LONG)
+        - Verifying that at least one entity is configured for forwarding
+        - Logs error messages for any missing configuration
+
+    Returns:
+        bool: True if the configuration is valid, False otherwise
+    """
+    required_vars = {["HA_TOKEN", "HA_URL", "AIRMONITOR_API_KEY", "LAT", "LONG"]}
     missing = [var for var in required_vars if not os.environ.get(var)]
 
     if missing:
@@ -233,7 +294,25 @@ def validate_config():
 
 def main():
     """
-    Main function to run the data forwarding loop.
+    Parameters:
+        None
+
+    Functionality:
+        Main entry point for the AirMonitor data forwarder application.
+        - Initializes the application with a startup log message
+        - Validates the configuration using validate_config()
+        - Exits if configuration is invalid
+        - Enters a continuous loop that:
+          * Retrieves sensor data from Home Assistant
+          * Prepares the data for AirMonitor if data was retrieved
+          * Sends the prepared data to AirMonitor
+          * Logs a warning if no sensor data was retrieved
+          * Sleeps for the configured interval before the next cycle
+        - Handles KeyboardInterrupt for graceful shutdown
+        - Catches and logs other exceptions, then re-raises them
+
+    Returns:
+        None
     """
     logger.info("Starting AirMonitor data forwarder")
 
