@@ -217,20 +217,14 @@ def _fetch_entity_states(session, entity_dict):
         return {}
 
 
-def get_ha_sensor_data(entity_dict):
+def get_ha_sensor_data(entity_dict, session=None):
     """
     Parameters:
         entity_dict (dict): Dictionary mapping Home Assistant entity IDs to AirMonitor keys
+        session (requests.Session, optional): An existing session to reuse
 
     Functionality:
-        Retrieves sensor data from Home Assistant API by:
-        - Validating that the Home Assistant token is set
-        - Setting up proper authentication headers
-        - Creating a session for connection pooling to improve performance
-        - Testing authentication with the Home Assistant API
-        - Fetching entity states for all requested entities
-        - Handling authentication failures and other errors
-        - Delegating the actual data fetching to helper functions
+        Retrieves sensor data from Home Assistant API using a reusable session
 
     Returns:
         dict: A dictionary mapping AirMonitor keys to sensor values (as floats),
@@ -240,21 +234,31 @@ def get_ha_sensor_data(entity_dict):
         logger.error("Home Assistant token is not set")
         return {}
 
-    headers = {
-        "Authorization": f"Bearer {HA_TOKEN}",
-        "Content-Type": "application/json",
-    }
-
-    # Create a session for connection pooling
-    with requests.Session() as session:
-        session.headers.update(headers)
+    close_session = False
+    if session is None:
+        close_session = True
+        session = requests.Session()
+        session.headers.update({
+            "Authorization": f"Bearer {HA_TOKEN}",
+            "Content-Type": "application/json",
+        })
 
         # Test authentication first
         if not _validate_ha_authentication(session):
+            if close_session:
+                session.close()
             return {}
 
-        # Fetch all entity states in a single call if possible
-        return _fetch_entity_states(session, entity_dict)
+    try:
+        # Fetch all entity states
+        result = _fetch_entity_states(session, entity_dict)
+        return result
+    except Exception as e:
+        logger.error(f"Error retrieving data from Home Assistant: {e}")
+        return {}
+    finally:
+        if close_session:
+            session.close()
 
 
 def prepare_airmonitor_data(sensor_data, sensor_model):
@@ -392,24 +396,65 @@ def validate_config():
     return True
 
 
+def process_sensor_data(session, entities, common_entities, sensor_model, sensor_type):
+    """
+    Process a single type of sensor data (particle or gas) and send to AirMonitor.
+
+    Parameters:
+        session (requests.Session): Reusable session for API calls
+        entities (dict): Sensor-specific entities to fetch
+        common_entities (dict): Common entities (temp, humidity) to include
+        sensor_model (str): Model of the sensor
+        sensor_type (str): Type of sensor ("particle" or "gas")
+
+    Returns:
+        bool: True if processing was successful, False otherwise
+    """
+    # Combine entities with common entities if needed
+    combined_entities = entities.copy()
+    if sensor_type == "particle" and common_entities:
+        combined_entities.update(common_entities)
+
+    # Get sensor data from Home Assistant
+    sensor_data = get_ha_sensor_data(combined_entities, session)
+
+    if not sensor_data:
+        logger.warning(f"No {sensor_type} sensor data retrieved from Home Assistant")
+        return False
+
+    # Prepare data for AirMonitor
+    airmonitor_data = prepare_airmonitor_data(sensor_data, sensor_model)
+
+    if not airmonitor_data:
+        return False
+
+    # Send data to AirMonitor
+    success = send_to_airmonitor(airmonitor_data)
+    if success:
+        logger.info(f"Successfully sent {sensor_type} data to AirMonitor")
+    else:
+        logger.warning(f"Failed to send {sensor_type} data to AirMonitor")
+
+    return success
+
+
 def main():
     """
     Parameters:
         None
 
     Functionality:
-        Main entry point for the AirMonitor data forwarder application.
-        - Initializes the application with a startup log message
+        Serves as the entry point for the AirMonitor data forwarder application.
+        - Logs the start of the application
         - Validates the configuration using validate_config()
-        - Exits if configuration is invalid
+        - Creates a persistent HTTP session with proper authentication headers
+        - Tests Home Assistant authentication at startup
         - Enters a continuous loop that:
-          * Retrieves particle and gas sensor data from Home Assistant separately
-          * Prepares the data for AirMonitor if data was retrieved
-          * Sends the prepared data to AirMonitor in separate calls
-          * Logs a warning if no sensor data was retrieved
-          * Sleeps for the configured interval before the next cycle
-        - Handles KeyboardInterrupt for graceful shutdown
-        - Catches and logs other exceptions, then re-raises them
+          * Processes particle sensor data if configured
+          * Processes gas sensor data if configured
+          * Sleeps for the configured interval between cycles
+        - Handles keyboard interrupts gracefully
+        - Catches and logs unexpected exceptions
 
     Returns:
         None
@@ -420,56 +465,50 @@ def main():
         logger.error("Invalid configuration. Exiting.")
         return
 
-    try:
-        while True:
-            # Process particle measurements
-            if PARTICLE_ENTITIES:
-                # Get particle sensor data from Home Assistant
-                particle_data = get_ha_sensor_data({**PARTICLE_ENTITIES, **COMMON_ENTITIES})
+    # Create a persistent session for better performance
+    headers = {
+        "Authorization": f"Bearer {HA_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
-                if particle_data:
-                    # Prepare data for AirMonitor
-                    airmonitor_particle_data = prepare_airmonitor_data(particle_data, PARTICLE_SENSOR_MODEL)
+    with requests.Session() as session:
+        session.headers.update(headers)
 
-                    # Send particle data to AirMonitor
-                    if airmonitor_particle_data:
-                        success = send_to_airmonitor(airmonitor_particle_data)
-                        if success:
-                            logger.info("Successfully sent particle data to AirMonitor")
-                        else:
-                            logger.warning("Failed to send particle data to AirMonitor")
-                else:
-                    logger.warning("No particle sensor data retrieved from Home Assistant")
+        # Test authentication once at startup
+        if not _validate_ha_authentication(session):
+            return
 
-            # Process gas measurements
-            if GAS_ENTITIES and GAS_SENSOR_MODEL:
-                # Get gas sensor data from Home Assistant
-                gas_data = get_ha_sensor_data({**GAS_ENTITIES})
+        try:
+            while True:
+                # Process particle measurements if configured
+                if PARTICLE_ENTITIES and PARTICLE_SENSOR_MODEL:
+                    process_sensor_data(
+                        session,
+                        PARTICLE_ENTITIES,
+                        COMMON_ENTITIES,
+                        PARTICLE_SENSOR_MODEL,
+                        "particle",
+                    )
 
-                if gas_data:
-                    # Prepare data for AirMonitor
-                    airmonitor_gas_data = prepare_airmonitor_data(gas_data, GAS_SENSOR_MODEL)
+                # Process gas measurements if configured
+                if GAS_ENTITIES and GAS_SENSOR_MODEL:
+                    process_sensor_data(
+                        session,
+                        GAS_ENTITIES,
+                        {},
+                        GAS_SENSOR_MODEL,
+                        "gas",
+                    )
 
-                    # Send gas data to AirMonitor
-                    if airmonitor_gas_data:
-                        success = send_to_airmonitor(airmonitor_gas_data)
-                        if success:
-                            logger.info("Successfully sent gas data to AirMonitor")
-                        else:
-                            logger.warning("Failed to send gas data to AirMonitor")
-                else:
-                    logger.warning("No gas sensor data retrieved from Home Assistant")
+                # Sleep before the next cycle
+                logger.info(f"Sleeping for {SLEEP_INTERVAL} seconds")
+                time.sleep(SLEEP_INTERVAL)
 
-            # Sleep before the next cycle
-            logger.info(f"Sleeping for {SLEEP_INTERVAL} seconds")
-
-            time.sleep(SLEEP_INTERVAL)
-
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt. Exiting.")
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        raise
+        except KeyboardInterrupt:
+            logger.info("Received keyboard interrupt. Exiting.")
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            raise
 
 
 if __name__ == "__main__":
