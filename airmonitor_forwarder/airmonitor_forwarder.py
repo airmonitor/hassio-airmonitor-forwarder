@@ -21,6 +21,11 @@ SUPPORTED_PARTICLE_SENSOR_MODELS = [
     "HPMA115S0",
     "SEN55",
 ]
+SUPPORTED_GAS_SENSOR_MODELS = [
+    "MICS-4514",
+    "MH-Z19",
+    "CCS811",
+]
 # Configuration from environment variables
 AIRMONITOR_API_URL = "https://airmonitor.pl/prod/measurements"
 
@@ -32,6 +37,7 @@ try:
     LAT = os.environ.get("LAT")
     LONG = os.environ.get("LONG")
     PARTICLE_SENSOR_MODEL = os.environ.get("PARTICLE_SENSOR_MODEL")
+    GAS_SENSOR_MODEL = os.environ.get("GAS_SENSOR_MODEL")
     SLEEP_INTERVAL = 300
 
 except Exception as e:
@@ -39,7 +45,9 @@ except Exception as e:
     sys.exit(1)
 
 # Define which Home Assistant entities to forward
-ENTITIES_TO_FORWARD = {}
+PARTICLE_ENTITIES = {}
+GAS_ENTITIES = {}
+COMMON_ENTITIES = {}
 
 # Add PM entities if they exist
 pm_entities = [
@@ -51,12 +59,21 @@ pm_entities = [
 for env_var, api_key in pm_entities:
     entity_id = os.environ.get(env_var)
     if entity_id and entity_id.lower() != "null":
-        ENTITIES_TO_FORWARD[entity_id] = api_key
+        PARTICLE_ENTITIES[entity_id] = api_key
 
-# Add optional entities if they exist
-optional_entities = [
+# Add optional common entities if they exist
+common_entities = [
     ("TEMPERATURE_ENTITY", "temperature"),
     ("HUMIDITY_ENTITY", "humidity"),
+]
+
+for env_var, api_key in common_entities:
+    entity_id = os.environ.get(env_var)
+    if entity_id and entity_id.lower() != "null":
+        COMMON_ENTITIES[entity_id] = api_key
+
+# Add gas entities if they exist
+gas_entities = [
     ("AMMONIA_ENTITY", "nh3"),
     ("CARBON_MONOXIDE_ENTITY", "co"),
     ("HYDROGEN_ENTITY", "h2"),
@@ -65,27 +82,36 @@ optional_entities = [
     ("NITROGEN_DIOXIDE_ENTITY", "no2"),
 ]
 
-for env_var, api_key in optional_entities:
+for env_var, api_key in gas_entities:
     entity_id = os.environ.get(env_var)
     if entity_id and entity_id.lower() != "null":
-        ENTITIES_TO_FORWARD[entity_id] = api_key
+        GAS_ENTITIES[entity_id] = api_key
 
 # Log the configuration
 logger.info(f"HA_URL: {HA_URL}")
 logger.info(f"AIRMONITOR_API_URL: {AIRMONITOR_API_URL}")
 logger.info(f"LAT: {LAT}, LONG: {LONG}")
 logger.info(f"PARTICLE_SENSOR_MODEL: {PARTICLE_SENSOR_MODEL}")
+logger.info(f"GAS_SENSOR_MODEL: {GAS_SENSOR_MODEL}")
 logger.info(f"SLEEP_INTERVAL: {SLEEP_INTERVAL}")
-logger.info(f"Entities to forward: {ENTITIES_TO_FORWARD}")
+logger.info(f"Particle entities to forward: {PARTICLE_ENTITIES}")
+logger.info(f"Gas entities to forward: {GAS_ENTITIES}")
+logger.info(f"Common entities to forward: {COMMON_ENTITIES}")
+
+# For backward compatibility
+ENTITIES_TO_FORWARD = {**PARTICLE_ENTITIES, **COMMON_ENTITIES, **GAS_ENTITIES}
 
 # Remove any empty entity IDs
+PARTICLE_ENTITIES = {k: v for k, v in PARTICLE_ENTITIES.items() if k}
+GAS_ENTITIES = {k: v for k, v in GAS_ENTITIES.items() if k}
+COMMON_ENTITIES = {k: v for k, v in COMMON_ENTITIES.items() if k}
 ENTITIES_TO_FORWARD = {k: v for k, v in ENTITIES_TO_FORWARD.items() if k}
 
 
-def get_ha_sensor_data():
+def get_ha_sensor_data(entity_dict):
     """
     Parameters:
-        None
+        entity_dict (dict): Dictionary mapping entity IDs to AirMonitor keys
 
     Functionality:
         Retrieves sensor data from Home Assistant API.
@@ -137,7 +163,7 @@ def get_ha_sensor_data():
     sensor_data = {}
 
     try:
-        for entity_id, airmonitor_key in ENTITIES_TO_FORWARD.items():
+        for entity_id, airmonitor_key in entity_dict.items():
             try:
                 response = requests.get(
                     f"{HA_URL}/states/{entity_id}",
@@ -177,19 +203,20 @@ def get_ha_sensor_data():
         return {}
 
 
-def prepare_airmonitor_data(sensor_data):
+def prepare_airmonitor_data(sensor_data, sensor_model):
     """
     Parameters:
         sensor_data (dict): Dictionary containing sensor measurements with keys
                            representing sensor types (e.g., 'pm10', 'temperature')
                            and values as floating-point measurements.
+        sensor_model (str): The model of the sensor to include in the data
 
     Functionality:
         Prepares sensor data for submission to the AirMonitor API by:
         - Validating that sensor data exists
         - Rounding all measurement values to integers as required by the API
         - Adding required metadata (latitude, longitude, sensor model)
-        - The metadata values are taken from environment variables (LAT, LONG, SENSOR_MODEL)
+        - The metadata values are taken from environment variables (LAT, LONG)
 
     Returns:
         dict: A dictionary containing the formatted data ready for submission to AirMonitor API,
@@ -205,7 +232,7 @@ def prepare_airmonitor_data(sensor_data):
     # Add required metadata
     data["lat"] = LAT
     data["long"] = LONG
-    data["sensor"] = PARTICLE_SENSOR_MODEL
+    data["sensor"] = sensor_model
 
     return data
 
@@ -294,10 +321,17 @@ def validate_config():
         logger.error("No valid entities configured for forwarding")
         return False
 
-    # Validate particle sensor model
-    if PARTICLE_SENSOR_MODEL not in SUPPORTED_PARTICLE_SENSOR_MODELS:
+    # Validate particle sensor model if particle entities exist
+    if PARTICLE_ENTITIES and PARTICLE_SENSOR_MODEL not in SUPPORTED_PARTICLE_SENSOR_MODELS:
         logger.warning(
             f"Unsupported particle sensor model: {PARTICLE_SENSOR_MODEL}. "
+            f"Using it anyway, but it might not be recognized by AirMonitor.",
+        )
+
+    # Validate gas sensor model if gas entities exist
+    if GAS_ENTITIES and GAS_SENSOR_MODEL and GAS_SENSOR_MODEL not in SUPPORTED_GAS_SENSOR_MODELS:
+        logger.warning(
+            f"Unsupported gas sensor model: {GAS_SENSOR_MODEL}. "
             f"Using it anyway, but it might not be recognized by AirMonitor.",
         )
 
@@ -315,9 +349,9 @@ def main():
         - Validates the configuration using validate_config()
         - Exits if configuration is invalid
         - Enters a continuous loop that:
-          * Retrieves sensor data from Home Assistant
+          * Retrieves particle and gas sensor data from Home Assistant separately
           * Prepares the data for AirMonitor if data was retrieved
-          * Sends the prepared data to AirMonitor
+          * Sends the prepared data to AirMonitor in separate calls
           * Logs a warning if no sensor data was retrieved
           * Sleeps for the configured interval before the next cycle
         - Handles KeyboardInterrupt for graceful shutdown
@@ -334,26 +368,53 @@ def main():
 
     try:
         while True:
-            # Get sensor data from Home Assistant
-            sensor_data = get_ha_sensor_data()
+            # Process particle measurements
+            if PARTICLE_ENTITIES:
+                # Get particle sensor data from Home Assistant
+                particle_data = get_ha_sensor_data({**PARTICLE_ENTITIES, **COMMON_ENTITIES})
 
-            if sensor_data:
-                # Prepare data for AirMonitor
-                airmonitor_data = prepare_airmonitor_data(sensor_data)
+                if particle_data:
+                    # Prepare data for AirMonitor
+                    airmonitor_particle_data = prepare_airmonitor_data(particle_data, PARTICLE_SENSOR_MODEL)
 
-                # Send data to AirMonitor
-                if airmonitor_data:
-                    send_to_airmonitor(airmonitor_data)
-            else:
-                logger.warning("No sensor data retrieved from Home Assistant")
+                    # Send particle data to AirMonitor
+                    if airmonitor_particle_data:
+                        success = send_to_airmonitor(airmonitor_particle_data)
+                        if success:
+                            logger.info("Successfully sent particle data to AirMonitor")
+                        else:
+                            logger.warning("Failed to send particle data to AirMonitor")
+                else:
+                    logger.warning("No particle sensor data retrieved from Home Assistant")
 
-            # Sleep until next forwarding
+            # Process gas measurements
+            if GAS_ENTITIES and GAS_SENSOR_MODEL:
+                # Get gas sensor data from Home Assistant
+                gas_data = get_ha_sensor_data({**GAS_ENTITIES, **COMMON_ENTITIES})
+
+                if gas_data:
+                    # Prepare data for AirMonitor
+                    airmonitor_gas_data = prepare_airmonitor_data(gas_data, GAS_SENSOR_MODEL)
+
+                    # Send gas data to AirMonitor
+                    if airmonitor_gas_data:
+                        success = send_to_airmonitor(airmonitor_gas_data)
+                        if success:
+                            logger.info("Successfully sent gas data to AirMonitor")
+                        else:
+                            logger.warning("Failed to send gas data to AirMonitor")
+                else:
+                    logger.warning("No gas sensor data retrieved from Home Assistant")
+
+            # Sleep before the next cycle
+            logger.info(f"Sleeping for {SLEEP_INTERVAL} seconds")
+
             time.sleep(SLEEP_INTERVAL)
 
     except KeyboardInterrupt:
-        logger.info("Stopping AirMonitor data forwarder")
-    except Exception as error:
-        logger.error(f"Caught exception: {error}")
+        logger.info("Received keyboard interrupt. Exiting.")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
         raise
 
 

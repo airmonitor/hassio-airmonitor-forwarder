@@ -10,6 +10,7 @@ export AIRMONITOR_API_KEY=$(bashio::config 'airmonitor_api_key')
 export LAT=$(bashio::config 'latitude')
 export LONG=$(bashio::config 'longitude')
 export PARTICLE_SENSOR_MODEL=$(bashio::config 'particle_sensor_model')
+export GAS_SENSOR_MODEL=$(bashio::config 'gas_sensor_model')
 
 # Get entity mappings
 export PM1_ENTITY=$(bashio::config 'entities.pm1')
