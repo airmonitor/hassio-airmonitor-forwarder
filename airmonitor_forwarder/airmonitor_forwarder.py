@@ -108,66 +108,80 @@ COMMON_ENTITIES = {k: v for k, v in COMMON_ENTITIES.items() if k}
 ENTITIES_TO_FORWARD = {k: v for k, v in ENTITIES_TO_FORWARD.items() if k}
 
 
-def get_ha_sensor_data(entity_dict):
+def _validate_ha_authentication(session):
     """
     Parameters:
-        entity_dict (dict): Dictionary mapping entity IDs to AirMonitor keys
+        session (requests.Session): An initialized requests Session object with authentication headers
 
     Functionality:
-        Retrieves sensor data from Home Assistant API.
-        - Validates that the Home Assistant token is set
-        - Tests authentication with the Home Assistant API
-        - Iterates through configured entities and retrieves their states
-        - Converts entity states to float values
-        - Skips entities with unavailable, unknown, none, or empty states
-        - Handles various error conditions including authentication failures,
-          API errors, and value conversion errors
+        Tests the Home Assistant API authentication by:
+        - Making a GET request to the Home Assistant API root endpoint
+        - Checking the response status code to determine authentication status
+        - Handling different error cases:
+          * 401: Authentication failure (invalid token or insufficient permissions)
+          * Non-200: Other API errors
+        - Logging appropriate messages for each scenario
+        - Catching and logging any request exceptions that occur
 
     Returns:
-        dict: A dictionary mapping AirMonitor keys to sensor values.
-              Returns an empty dictionary if any errors occur or if no
-              valid data is retrieved.
+        bool: True if authentication is successful, False otherwise
     """
-    if not HA_TOKEN:
-        logger.error("Home Assistant token is not set")
-        return {}
-
-    headers = {
-        "Authorization": f"Bearer {HA_TOKEN}",
-        "Content-Type": "application/json",
-    }
-
-    # Test the authentication first
     try:
         logger.info("Testing Home Assistant API authentication...")
-        test_response = requests.get(
+        test_response = session.get(
             f"{HA_URL}/",
-            headers=headers,
             timeout=10,
         )
 
         if test_response.status_code == 401:
             logger.error("Authentication failed: Invalid token or insufficient permissions")
             logger.error("Please create a new long-lived access token in Home Assistant")
-            return {}
+            return False
         elif test_response.status_code != 200:
             logger.error(f"API test failed with status code: {test_response.status_code}")
             logger.error(f"Response: {test_response.text}")
-            return {}
-        else:
-            logger.info("Authentication successful")
+            return False
+
+        logger.info("Authentication successful")
+        return True
     except requests.exceptions.RequestException as e:
         logger.error(f"Error testing API: {e}")
-        return {}
+        return False
 
+
+def _fetch_entity_states(session, entity_dict):
+    """
+    Parameters:
+        session (requests.Session): An initialized requests Session object with authentication headers
+        entity_dict (dict): Dictionary mapping Home Assistant entity IDs to AirMonitor keys
+
+    Functionality:
+        Fetches entity states from Home Assistant API by:
+        - Iterating through each entity in the provided dictionary
+        - Making individual GET requests to the Home Assistant states endpoint for each entity
+        - Processing the response for each entity:
+          * Skipping entities with unavailable, unknown, none, or empty states
+          * Converting valid states to float values
+          * Logging appropriate messages for successful retrievals and errors
+        - Handling various error conditions:
+          * Non-200 response codes
+          * Value conversion errors
+          * Request exceptions
+        - Collecting all valid entity values into a single dictionary
+
+    Returns:
+        dict: A dictionary mapping AirMonitor keys to sensor values (as floats),
+              or an empty dictionary if errors occurred
+    """
     sensor_data = {}
 
+    # If Home Assistant API supports it, we could use a bulk fetch endpoint
+    # For now, optimize by using the same session for all requests
     try:
         for entity_id, airmonitor_key in entity_dict.items():
             try:
-                response = requests.get(
+                response = session.get(
                     f"{HA_URL}/states/{entity_id}",
-                    headers=headers,
                     timeout=10,
                 )
 
@@ -201,6 +215,46 @@ def get_ha_sensor_data(entity_dict):
     except Exception as e:
         logger.error(f"Error retrieving data from Home Assistant: {e}")
         return {}
+
+
+def get_ha_sensor_data(entity_dict):
+    """
+    Parameters:
+        entity_dict (dict): Dictionary mapping Home Assistant entity IDs to AirMonitor keys
+
+    Functionality:
+        Retrieves sensor data from Home Assistant API by:
+        - Validating that the Home Assistant token is set
+        - Setting up proper authentication headers
+        - Creating a session for connection pooling to improve performance
+        - Testing authentication with the Home Assistant API
+        - Fetching entity states for all requested entities
+        - Handling authentication failures and other errors
+        - Delegating the actual data fetching to helper functions
+
+    Returns:
+        dict: A dictionary mapping AirMonitor keys to sensor values (as floats),
+              or an empty dictionary if errors occurred or authentication failed
+    """
+    if not HA_TOKEN:
+        logger.error("Home Assistant token is not set")
+        return {}
+
+    headers = {
+        "Authorization": f"Bearer {HA_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    # Create a session for connection pooling
+    with requests.Session() as session:
+        session.headers.update(headers)
+
+        # Test authentication first
+        if not _validate_ha_authentication(session):
+            return {}
+
+        # Fetch all entity states in a single call if possible
+        return _fetch_entity_states(session, entity_dict)
 
 
 def prepare_airmonitor_data(sensor_data, sensor_model):
@@ -390,7 +444,7 @@ def main():
             # Process gas measurements
             if GAS_ENTITIES and GAS_SENSOR_MODEL:
                 # Get gas sensor data from Home Assistant
-                gas_data = get_ha_sensor_data({**GAS_ENTITIES, **COMMON_ENTITIES})
+                gas_data = get_ha_sensor_data({**GAS_ENTITIES})
 
                 if gas_data:
                     # Prepare data for AirMonitor
